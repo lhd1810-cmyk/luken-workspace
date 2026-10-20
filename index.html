@@ -118,7 +118,7 @@ async function loadTasks(){let q=db.from('missions').select('id,branch_id,title,
 function openLogin(unit){pendingUnit=unit||pendingUnit||null;$('authError').textContent='';$('authGate').classList.remove('off');}
 function closeLogin(){$('authGate').classList.add('off');pendingUnit=null;}
 function hasAccess(id){return !!user&&(isAdmin||!!roles[id]);}
-function selectUnit(id){if(id==='all'){active='all';$('statusFilter').value='진행 중';render();return}if(!user){openLogin(id);return}active=id;$('statusFilter').value='all';render();if(id==='marketing'&&isAdmin)loadLeads();}
+function selectUnit(id){if(id==='all'){active='all';$('statusFilter').value='진행 중';render();return}if(!user){openLogin(id);return}active=id;$('statusFilter').value='진행 중';render();if(id==='marketing'&&isAdmin)loadLeads();}
 function publicHome(){user=null;isAdmin=false;roles={};active='all';state.units=unitsAll;state.tasks=[];summaryStats=null;initialized=true;$('authGate').classList.add('off');render();}
 async function startApp(){
  const {data:{session},error}=await db.auth.getSession();
@@ -132,7 +132,7 @@ async function startApp(){
  roles=Object.fromEntries((members||[]).map(m=>[m.branch_id,m.role]));
  state.units=unitsAll;initialized=true;
  const next=pendingUnit;pendingUnit=null;
- active=next&&hasAccess(next)?next:'all';$('statusFilter').value=active==='all'?'진행 중':'all';
+ active=next&&hasAccess(next)?next:'all';$('statusFilter').value='진행 중';
  $('authGate').classList.add('off');$('appAlert').classList.remove('show');
  $('whoami').textContent=(profile.display_name||user.email)+' · '+(isAdmin?'전체 관리자':'사업부 사용자');
  await loadTasks();
