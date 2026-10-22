@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>마케팅플로우 · 개발 미리보기</title>
+<style>
+:root{font-family:system-ui,'Noto Sans KR',sans-serif;color:#202b40;background:#f6f8fc}*{box-sizing:border-box}body{margin:0}.layout{display:flex;min-height:100vh}aside{width:235px;flex-shrink:0;background:#16263d;color:#d7e0ee;padding:24px 14px}aside h2{color:white;font-size:17px;margin:0 8px 28px}nav button{display:block;width:100%;padding:13px;text-align:left;background:transparent;color:inherit;border:0;border-radius:9px;font-size:14px;cursor:pointer}nav button.active,nav button:hover{background:#304d79;color:#fff}main{padding:30px;max-width:1300px;width:100%;margin:auto}.heading{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}h1{font-size:24px;margin:0 0 8px}p{color:#728096}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:22px 0}.card,.panel{background:white;border:1px solid #e6ebf3;border-radius:14px;padding:20px}.card small{color:#78879a}.card strong{display:block;font-size:29px;margin-top:9px}.cols{display:grid;grid-template-columns:1fr 1fr;gap:16px}.panel h3{margin:0 0 15px}.item{padding:13px 0;border-top:1px solid #edf0f5;display:flex;gap:12px;align-items:center;justify-content:space-between}.item:first-of-type{border-top:0}.muted{font-size:12px;color:#8b96a5}.btn{border:1px solid #d9e1ef;border-radius:9px;background:#fff;padding:10px 14px;cursor:pointer}.btn.primary{background:#3c64db;color:white;border-color:#3c64db}.tag{border-radius:8px;background:#edf2ff;color:#3154a6;padding:5px 8px;font-size:12px}.note{padding:13px;background:#fff8e7;color:#8a6422;border-radius:10px;margin:14px 0}input,select{padding:10px;border:1px solid #d9e1eb;border-radius:8px;max-width:100%}label{display:block;font-size:12px;color:#66758b;margin-bottom:6px}.form{display:flex;flex-wrap:wrap;gap:9px;align-items:end;margin:15px 0}.form>div{flex:1;min-width:130px}.hidden{display:none}table{border-collapse:collapse;width:100%;text-align:left}th,td{padding:13px;border-bottom:1px solid #e9edf4;font-size:13px}th{color:#7c8999}a{color:#315bc5}@media(max-width:800px){.layout{display:block}aside{width:100%;padding:13px}aside h2{margin:0 0 10px}nav{display:flex;overflow-x:auto;gap:4px}nav button{white-space:nowrap;width:auto}main{padding:18px 12px}.grid{grid-template-columns:repeat(2,1fr)}.cols{grid-template-columns:1fr}.card,.panel{padding:15px}h1{font-size:21px}}
+</style></head><body>
+<div class="layout"><aside><h2>LUKEN / 마케팅플로우</h2><nav id="nav"></nav></aside>
+<main><div class="heading"><div><div class="muted">마케팅 사업부 / 개발 미리보기</div><h1 id="title">마케팅 홈</h1><p id="subtitle">영업부터 실행까지 한곳에서 확인합니다.</p></div><a class="btn" href="../index.html">← 기존 워크스페이스</a></div>
+<div class="note">개발 1차 미리보기입니다. 실제 고객정보를 입력하지 마세요. 현재 입력 내용은 서버에 저장되지 않으며 새로고침하면 사라집니다.</div><div id="content"></div>
+</main></div>
+<script>
+'use strict';
+const tabs=[['home','마케팅 홈'],['sales','영업 관리'],['clients','고객사 관리'],['tasks','내 업무'],['requests','고객 요청'],['reports','성과·리포트'],['schedule','업무 일정'],['products','상품·계약·정산']];
+const sampleClients=[{name:'예시 브랜드 A',branch:'1호점',status:'진행 중'},{name:'예시 브랜드 A',branch:'2호점',status:'상담 중'}];
+let leads=[],tasks=[],view='home';
+const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const cards=a=>'<div class="grid">'+a.map(([k,v])=>'<div class="card"><small>'+k+'</small><strong>'+v+'</strong></div>').join('')+'</div>';
+const panel=(title,body)=>'<section class="panel"><h3>'+title+'</h3>'+body+'</section>';
+const rows=(items,empty)=>items.length?items.map(s=>'<div class="item">'+s+'</div>').join(''):'<p class="muted">'+empty+'</p>';
+function render(){
+$('nav').innerHTML=tabs.map(([id,label])=>'<button data-view="'+id+'" class="'+(view===id?'active':'')+'">'+label+'</button>').join('');
+$('title').textContent=tabs.find(t=>t[0]===view)[1];
+$('subtitle').textContent=view==='home'?'오늘 할 일과 영업 진행 상황을 빠르게 확인합니다.':'기능별 업무를 관리하는 화면입니다.';
+let html='';
+if(view==='home'){html=cards([['진행 중 영업',leads.filter(x=>x.status!=='계약 완료').length+'건'],['등록 고객사',sampleClients.length+'개 지점 (예시)'],['오늘 할 일',tasks.filter(x=>!x.done).length+'건'],['미처리 요청','0건']])+'<div class="cols">'+panel('영업 진행 현황',rows(leads.map(x=>'<span>'+esc(x.name)+'</span><span class="tag">'+esc(x.status)+'</span>'),'등록된 영업 건이 없습니다.'))+panel('내 업무',rows(tasks.filter(x=>!x.done).map(x=>'<span>'+esc(x.title)+'</span><span class="muted">'+esc(x.due||'기한 없음')+'</span>'),'등록된 업무가 없습니다.'))+'</div>'}
+if(view==='sales'){html=panel('영업 파이프라인','<form class="form" id="leadForm"><div><label>잠재 고객사</label><input name="name" required placeholder="고객사명"></div><div><label>진행 단계</label><select name="status"><option>신규 문의</option><option>상담 진행</option><option>제안서·견적 발송</option><option>계약 협의</option><option>계약 완료</option><option>보류</option><option>실패</option></select></div><button class="btn primary">등록</button></form>'+rows(leads.map((x,i)=>'<span>'+esc(x.name)+'</span><span class="tag">'+esc(x.status)+'</span><button class="btn" data-del-lead="'+i+'">삭제</button>'),'영업 건을 등록해 보세요.'))}
+if(view==='clients'){html=panel('브랜드 → 지점 구조','<p class="muted">아래는 구조를 보여주기 위한 예시입니다. 실제 고객사가 아닙니다.</p><table><tr><th>브랜드</th><th>지점</th><th>상태</th></tr>'+sampleClients.map(x=>'<tr><td>'+esc(x.name)+'</td><td>'+esc(x.branch)+'</td><td>'+esc(x.status)+'</td></tr>').join('')+'</table>')}
+if(view==='tasks'){html=panel('업무 체크리스트','<form class="form" id="taskForm"><div><label>업무 제목</label><input name="title" required placeholder="해야 할 업무"></div><div><label>마감일</label><input name="due" type="date"></div><button class="btn primary">추가</button></form>'+rows(tasks.map((x,i)=>'<label style="display:flex;align-items:center;gap:9px"><input type="checkbox" data-check="'+i+'" '+(x.done?'checked':'')+'><span style="'+(x.done?'text-decoration:line-through':'')+'">'+esc(x.title)+'</span></label><span class="muted">'+esc(x.due||'기한 없음')+'</span><button class="btn" data-del-task="'+i+'">삭제</button>'),'등록된 업무가 없습니다.'))}
+if(view==='requests')html=panel('고객 요청','<p>요청 접수 → 범위 확인 → 업무 배정 → 처리 완료</p><p class="muted">고객 포털과 실제 요청 데이터 연동은 다음 단계에서 구현합니다.</p>');
+if(view==='reports')html=panel('성과·리포트','<p>지점별 월간 보고서 초안 → 검토 → 승인 → 고객 공유</p><p class="muted">실제 지표 수집과 PDF 생성은 다음 단계에서 구현합니다.</p>');
+if(view==='schedule')html=panel('업무 일정','<p>마감 예정 업무를 모아 확인합니다.</p>'+rows(tasks.filter(x=>x.due).sort((a,b)=>a.due.localeCompare(b.due)).map(x=>'<span>'+esc(x.title)+'</span><span>'+esc(x.due)+'</span>'),'마감일이 있는 업무가 없습니다.'));
+if(view==='products')html=panel('상품·계약·정산','<p><b>플레이스 통합 마케팅 솔루션</b> · 월 500,000원 (VAT 별도)</p><p class="muted">소개 가격. 계약별 가격 확정, 부가서비스, 청구·정산 기능은 추후 연동합니다.</p>');
+$('content').innerHTML=html;
+}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-view],[data-del-lead],[data-del-task]');if(!b)return;if(b.dataset.view){view=b.dataset.view;render()}if(b.dataset.delLead!==undefined){leads.splice(+b.dataset.delLead,1);render()}if(b.dataset.delTask!==undefined){tasks.splice(+b.dataset.delTask,1);render()}});
+document.addEventListener('change',e=>{if(e.target.dataset.check!==undefined){tasks[+e.target.dataset.check].done=e.target.checked;render()}});
+document.addEventListener('submit',e=>{if(e.target.id==='leadForm'){e.preventDefault();const f=new FormData(e.target);leads.push({name:String(f.get('name')).trim(),status:String(f.get('status'))});render()}if(e.target.id==='taskForm'){e.preventDefault();const f=new FormData(e.target);tasks.push({title:String(f.get('title')).trim(),due:String(f.get('due')),done:false});render()}});
+render();
+</script></body></html>
