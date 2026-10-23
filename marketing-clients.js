@@ -29,12 +29,12 @@ function draw(){
  const visible=rows.filter(r=>(status==='all'||r.status===status)&&[r.brand_name,r.branch_name,r.contact_name,r.phone,r.service].some(v=>String(v||'').toLowerCase().includes(q)));
  const groups=new Map();for(const row of visible){if(!groups.has(row.brand_name))groups.set(row.brand_name,[]);groups.get(row.brand_name).push(row);}
  $('mcCounts').textContent='전체 '+new Set(rows.map(r=>r.brand_name)).size+'개 브랜드 · '+rows.length+'개 지점 / 현재 '+visible.length+'개 지점 표시';
- $('mcList').innerHTML=error||loading?'':visible.length?[...groups].sort(([a],[b])=>a.localeCompare(b,'ko')).map(([brand,branches])=>'<div class="mc-brand"><h3>'+esc(brand)+' · '+branches.length+'개 지점</h3>'+branches.sort((a,b)=>a.branch_name.localeCompare(b.branch_name,'ko')).map(r=>'<div class="mc-branch"><div><b>'+esc(r.branch_name)+'</b> <span class="mc-status">'+esc(r.status)+'</span><p>'+esc([r.contact_name,r.phone].filter(Boolean).join(' · ')||'담당자 정보 미등록')+'</p><p>'+esc(r.service||'서비스 미등록')+'</p><p>계약 '+esc(r.contract_start||'미정')+' ~ '+esc(r.contract_end||'미정')+'</p></div><div class="mc-client-actions"><button class="btn" data-mc-id="'+esc(r.id)+'">'+(writable()?'상세·수정':'상세 보기')+'</button>'+(writable()&&r.status!=='계약 종료'?'<button class="btn" data-client-request-link="'+esc(r.id)+'" data-client-label="'+esc(r.brand_name+' · '+r.branch_name)+'">요청 링크</button>':'')+'</div></div>').join('')+'</div>').join(''):'<p class="mc-msg">'+(rows.length?'검색 조건에 맞는 고객사가 없습니다.':'등록된 고객사가 없습니다.'+(writable()?' 고객사 등록을 눌러 첫 지점을 추가하세요.':''))+'</p>';
+ $('mcList').innerHTML=error||loading?'':visible.length?[...groups].sort(([a],[b])=>a.localeCompare(b,'ko')).map(([brand,branches])=>'<div class="mc-brand"><h3>'+esc(brand)+' · '+branches.length+'개 지점</h3>'+branches.sort((a,b)=>a.branch_name.localeCompare(b.branch_name,'ko')).map(r=>'<div class="mc-branch"><div><b>'+esc(r.branch_name)+'</b> <span class="mc-status">'+esc(r.status)+'</span><p>'+esc([r.contact_name,r.phone].filter(Boolean).join(' · ')||'담당자 정보 미등록')+'</p><p>'+esc(r.service||'서비스 미등록')+'</p><p>계약 '+esc(r.contract_start||'미정')+' ~ '+esc(r.contract_end||'미정')+'</p></div><div class="mc-client-actions"><button class="btn primary" data-client-work="'+esc(r.id)+'">업무·요청</button><button class="btn" data-mc-id="'+esc(r.id)+'">'+(writable()?'상세·수정':'상세 보기')+'</button>'+(writable()&&r.status!=='계약 종료'?'<button class="btn" data-client-request-link="'+esc(r.id)+'" data-client-label="'+esc(r.brand_name+' · '+r.branch_name)+'">요청 링크</button>':'')+'</div></div>').join('')+'</div>').join(''):'<p class="mc-msg">'+(rows.length?'검색 조건에 맞는 고객사가 없습니다.':'등록된 고객사가 없습니다.'+(writable()?' 고객사 등록을 눌러 첫 지점을 추가하세요.':''))+'</p>';
  panel.querySelectorAll('[data-mc-id]').forEach(b=>b.onclick=()=>edit(b.dataset.mcId));
 }
 async function load(){
  if(!allowed())return;const token=++request,uid=user.id;ownerId=uid;loading=true;error='';rows=[];draw();
- try{const result=await db.from('marketing_clients').select('*').order('created_at',{ascending:false}).limit(1000);if(token!==request||!allowed()||user.id!==uid)return;if(result.error)throw result.error;rows=result.data||[];}
+ try{const result=await db.from('marketing_clients').select('*').order('created_at',{ascending:false}).limit(1000);if(token!==request||!allowed()||user.id!==uid)return;if(result.error)throw result.error;rows=result.data||[];document.dispatchEvent(new CustomEvent('luken-clients-updated',{detail:rows.map(({id,brand_name,branch_name})=>({id,brand_name,branch_name}))}));}
  catch(e){if(token!==request)return;error=['42P01','PGRST205'].includes(e.code)?'고객사 저장소 설정이 필요합니다. Supabase SQL Editor에서 marketing-clients.sql을 한 번 실행한 뒤 새로고침해 주세요.':'고객사를 불러오지 못했습니다. 권한과 연결을 확인한 뒤 새로고침해 주세요.';}
  finally{if(token===request){loading=false;draw();}}
 }
@@ -68,4 +68,5 @@ $('mcDelete').onclick=async()=>{
 };
 sync();
 })();
+
 
