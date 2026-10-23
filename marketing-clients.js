@@ -9,6 +9,7 @@ let opened=false,rows=[],loading=false,error='',request=0,ownerId=null,saving=fa
 const panel=document.createElement('section');panel.id='marketingClients';panel.className='panel';panel.hidden=true;
 $('leadPanel').before(panel);
 const style=document.createElement('style');style.textContent=`#marketingClients[hidden]{display:none!important}#marketingClients{margin-bottom:20px}.mc-toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.mc-toolbar input,.mc-toolbar select{padding:10px;border:1px solid var(--border);border-radius:9px;max-width:100%}.mc-body{padding:16px 20px}.mc-brand{border:1px solid var(--border);border-radius:12px;margin-bottom:14px;overflow:hidden}.mc-brand h3{margin:0;padding:14px;background:#f7f8fc;font-size:15px}.mc-branch{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px;border-top:1px solid var(--border)}.mc-branch p{margin:6px 0;color:#657083;font-size:12px;white-space:pre-wrap;overflow-wrap:anywhere}.mc-status{font-size:11px;background:#eeefff;color:#5658db;padding:4px 8px;border-radius:6px}.mc-msg{padding:16px;color:#667085;line-height:1.7}#mcDialog{border:0;border-radius:16px;padding:24px;width:min(620px,calc(100% - 24px));max-height:90dvh;overflow:auto;color:var(--ink)}#mcDialog::backdrop{background:#12182977}#mcDialog h2{margin:0 0 20px}#mcDialog textarea{min-height:100px}#mcError{color:#b42318;white-space:pre-wrap}#mcDialog input:disabled,#mcDialog select:disabled,#mcDialog textarea:disabled{opacity:1;color:#475166;background:#f7f8fb}@media(max-width:760px){.mc-body{padding:12px}.mc-toolbar{width:100%}.mc-toolbar input{flex:1;min-width:140px}.mc-branch{align-items:flex-start;padding:12px}#mcDialog{padding:20px 16px}}`;
+style.textContent+=`.mc-branch-toggle{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;border:0;background:white;text-align:left;color:var(--ink);padding:17px;cursor:pointer;min-height:66px}.mc-branch-toggle:hover{background:#fafaff}.mc-branch-toggle[aria-expanded=true]{background:#f4f4ff}.mc-branch-toggle b{font-size:14px;overflow-wrap:anywhere}.mc-branch-toggle small{display:block;font-size:12px;color:#737e90;margin-top:6px}.mc-chevron{font-size:20px;color:#5658db}.mc-entry+.mc-entry{border-top:1px solid var(--border)}.mc-brand{margin-bottom:10px}.mc-client-slot:empty{display:none}`;
 document.head.append(style);
 panel.innerHTML='<div class="panel-head"><div><h2>고객사 관리</h2><p id="mcCounts">브랜드별 지점을 함께 관리합니다.</p></div><div class="mc-toolbar"><button class="btn" id="mcReload">새로고침</button><button class="btn primary" id="mcAdd">＋ 고객사 등록</button><button class="btn" id="mcClose">접기</button></div><div class="mc-toolbar"><input id="mcSearch" placeholder="브랜드 · 지점 · 담당자 · 연락처 검색" aria-label="고객사 검색"><select id="mcFilter" aria-label="고객사 상태"><option value="all">전체 상태</option>'+statuses.map(x=>'<option>'+x+'</option>').join('')+'</select></div></div><div id="mcMessage" class="mc-msg" role="status"></div><div class="mc-body" id="mcList"></div>';
 const fields=[['brand_name','브랜드명','text',120],['branch_name','지점명','text',120],['contact_name','고객사 담당자','text',120],['phone','연락처','tel',60],['email','이메일','email',254],['address','주소','text',500],['service','이용 서비스','text',500],['contract_start','계약 시작일','date'],['contract_end','계약 종료일','date']];
@@ -19,7 +20,7 @@ function sync(){
  if(!allowed()||ownerId&&ownerId!==user.id){opened=false;rows=[];request++;ownerId=null;editing=null;if(dialog.open)dialog.close();$('mcForm').reset();$('mcList').replaceChildren();}
  panel.hidden=!opened||!allowed();$('mcAdd').hidden=!writable();
 }
-const previousRender=render;render=function(){previousRender();sync();};
+const previousRender=render;render=function(){previousRender();sync();if(opened&&!loading)draw();};
 window.openMarketingClients=()=>{if(!allowed())return;opened=true;sync();panel.scrollIntoView({behavior:'smooth',block:'start'});load();};
 function draw(){
  if(!allowed())return;
@@ -29,8 +30,8 @@ function draw(){
  const visible=rows.filter(r=>(status==='all'||r.status===status)&&[r.brand_name,r.branch_name,r.contact_name,r.phone,r.service].some(v=>String(v||'').toLowerCase().includes(q)));
  const groups=new Map();for(const row of visible){if(!groups.has(row.brand_name))groups.set(row.brand_name,[]);groups.get(row.brand_name).push(row);}
  $('mcCounts').textContent='전체 '+new Set(rows.map(r=>r.brand_name)).size+'개 브랜드 · '+rows.length+'개 지점 / 현재 '+visible.length+'개 지점 표시';
- $('mcList').innerHTML=error||loading?'':visible.length?[...groups].sort(([a],[b])=>a.localeCompare(b,'ko')).map(([brand,branches])=>'<div class="mc-brand"><h3>'+esc(brand)+' · '+branches.length+'개 지점</h3>'+branches.sort((a,b)=>a.branch_name.localeCompare(b.branch_name,'ko')).map(r=>'<div class="mc-branch"><div><b>'+esc(r.branch_name)+'</b> <span class="mc-status">'+esc(r.status)+'</span><p>'+esc([r.contact_name,r.phone].filter(Boolean).join(' · ')||'담당자 정보 미등록')+'</p><p>'+esc(r.service||'서비스 미등록')+'</p><p>계약 '+esc(r.contract_start||'미정')+' ~ '+esc(r.contract_end||'미정')+'</p></div><div class="mc-client-actions"><button class="btn primary" data-client-work="'+esc(r.id)+'">업무·요청</button><button class="btn" data-mc-id="'+esc(r.id)+'">'+(writable()?'상세·수정':'상세 보기')+'</button>'+(writable()&&r.status!=='계약 종료'?'<button class="btn" data-client-request-link="'+esc(r.id)+'" data-client-label="'+esc(r.brand_name+' · '+r.branch_name)+'">요청 링크</button>':'')+'</div></div>').join('')+'</div>').join(''):'<p class="mc-msg">'+(rows.length?'검색 조건에 맞는 고객사가 없습니다.':'등록된 고객사가 없습니다.'+(writable()?' 고객사 등록을 눌러 첫 지점을 추가하세요.':''))+'</p>';
- panel.querySelectorAll('[data-mc-id]').forEach(b=>b.onclick=()=>edit(b.dataset.mcId));
+ $('mcList').innerHTML=error||loading?'':visible.length?[...groups].sort(([a],[b])=>a.localeCompare(b,'ko')).map(([brand,branches])=>'<div class="mc-brand">'+(branches.length>1?'<h3>'+esc(brand)+' · '+branches.length+'개 지점</h3>':'')+branches.sort((a,b)=>a.branch_name.localeCompare(b.branch_name,'ko')).map(r=>{const n=state.tasks.filter(t=>t.unit==='marketing'&&t.clientId===r.id&&t.status!=='완료').length;const requests=window.clientRequestCount?.(r.id);const expanded=window.isClientWorkOpen?.(r.id)||false;return '<div class="mc-entry"><button class="mc-branch-toggle" type="button" data-client-work="'+esc(r.id)+'" aria-expanded="'+expanded+'" aria-controls="client-work-'+esc(r.id)+'"><span><b>'+esc(branches.length===1?brand+' · '+r.branch_name:r.branch_name)+'</b><small>업무 '+n+'건'+(requests==null?'':' · 고객 요청 '+requests+'건')+'</small></span><span class="mc-chevron" aria-hidden="true">'+(expanded?'⌃':'⌄')+'</span></button><div class="mc-client-slot" id="client-work-'+esc(r.id)+'"></div></div>';}).join('')+'</div>').join(''):'<p class="mc-msg">'+(rows.length?'검색 조건에 맞는 고객사가 없습니다.':'등록된 고객사가 없습니다.'+(writable()?' 고객사 등록을 눌러 첫 지점을 추가하세요.':''))+'</p>';
+ document.dispatchEvent(new CustomEvent('luken-clients-rendered'));
 }
 async function load(){
  if(!allowed())return;const token=++request,uid=user.id;ownerId=uid;loading=true;error='';rows=[];draw();
@@ -47,11 +48,14 @@ function edit(id){
  dialog.querySelectorAll('input,textarea,select').forEach(el=>el.disabled=!writable());
  $('mcSave').hidden=!writable();$('mcDelete').hidden=!row||!writable();dialog.showModal();
 }
+window.getMarketingClient=id=>allowed()?rows.find(r=>r.id===id)||null:null;
+window.editMarketingClient=id=>edit(id);
+window.refreshMarketingClients=()=>{if(opened&&allowed())draw();};
 function busy(value){saving=value;dialog.querySelectorAll('button,input,textarea,select').forEach(el=>el.disabled=value);$('mcSave').textContent=value?'저장 중…':'저장';}
 function failure(e){return e.code==='23505'?'같은 브랜드와 지점이 이미 등록되어 있습니다.':e.code==='PGRST116'?'다른 사용자가 변경한 정보입니다. 닫고 새로고침한 뒤 다시 시도하세요.':'저장하지 못했습니다. 권한과 연결을 확인해 주세요.';}
 function close(){if(!saving)dialog.close();}
 dialog.addEventListener('cancel',e=>{if(saving)e.preventDefault();});
-$('mcCancel').onclick=close;$('mcClose').onclick=()=>{opened=false;panel.hidden=true;};$('mcAdd').onclick=()=>edit();$('mcReload').onclick=load;$('mcSearch').oninput=draw;$('mcFilter').onchange=draw;
+$('mcCancel').onclick=close;$('mcClose').onclick=()=>{opened=false;panel.hidden=true;window.closeClientWork?.();};$('mcAdd').onclick=()=>edit();$('mcReload').onclick=load;$('mcSearch').oninput=draw;$('mcFilter').onchange=draw;
 $('mcForm').onsubmit=async e=>{
  e.preventDefault();if(!writable()||saving)return;const uid=user.id;
  const payload=Object.fromEntries(fields.map(([key,,type])=>[key,type==='date'?$('mc_'+key).value||null:$('mc_'+key).value.trim()]));payload.status=$('mc_status').value;payload.memo=$('mc_memo').value.trim();
@@ -68,5 +72,6 @@ $('mcDelete').onclick=async()=>{
 };
 sync();
 })();
+
 
 
